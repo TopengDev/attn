@@ -509,14 +509,16 @@ function flushOutbox(ws: WebSocket): void {
 
 // --- Key request ---
 
-export function requestKey(address: string): Promise<string | null> {
-  const cached = state.keyCache.get(address.toLowerCase());
-  if (cached) return Promise.resolve(cached);
+export function requestKey(address: string, forceRefresh = false): Promise<string | null> {
+  if (!forceRefresh) {
+    const cached = state.keyCache.get(address.toLowerCase());
+    if (cached) return Promise.resolve(cached);
 
-  const dbCached = getKeyCache(address.toLowerCase());
-  if (dbCached) {
-    state.keyCache.set(address.toLowerCase(), dbCached);
-    return Promise.resolve(dbCached);
+    const dbCached = getKeyCache(address.toLowerCase());
+    if (dbCached) {
+      state.keyCache.set(address.toLowerCase(), dbCached);
+      return Promise.resolve(dbCached);
+    }
   }
 
   if (!isRelayReady()) {

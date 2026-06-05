@@ -110,7 +110,34 @@ async function handleRequest(
         return sendError(res, 'Not connected to relay', 503);
       }
 
-      const publicKey = await requestKey(to);
+      // Resolve .attn name via HTTP if needed
+      let resolvedTo = to;
+      let viaHttp = false;
+      if (!to.startsWith('0x')) {
+        const label = to.toLowerCase().replace(/\.attn$/, '');
+        try {
+          const httpRes = await fetch(
+            `https://attn.s0nderlabs.xyz/resolve?name=${label}`,
+          );
+          if (httpRes.ok) {
+            const data = (await httpRes.json()) as { address?: string };
+            if (data.address) {
+              resolvedTo = data.address;
+              viaHttp = true;
+            }
+          }
+        } catch {
+          // HTTP resolution failed
+        }
+        if (resolvedTo === to) {
+          return sendError(
+            res,
+            `Could not resolve .attn name "${to}"`,
+            404,
+          );
+        }
+      }
+      const publicKey = await requestKey(resolvedTo);
       if (!publicKey) {
         return sendError(
           res,
@@ -123,7 +150,7 @@ async function handleRequest(
       const id = crypto.randomUUID();
       const envelope = {
         id,
-        to: to.toLowerCase(),
+        to: resolvedTo.toLowerCase(),
         encrypted,
       };
       const signature = await signEnvelope(state.account!, envelope);
@@ -133,7 +160,7 @@ async function handleRequest(
           JSON.stringify({
             type: 'message',
             id,
-            to: to.toLowerCase(),
+            to: resolvedTo.toLowerCase(),
             encrypted,
             signature,
           }),
