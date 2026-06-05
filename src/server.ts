@@ -27,22 +27,16 @@ const unnamedClients = new Set<WsWebSocket>();
 
 // --- Broadcast to all pi clients ---
 
+const PRIMARY_SESSION = 'main';
+
 export function broadcastInbound(event: object): void {
   const data = JSON.stringify(event);
-  for (const client of sessions.values()) {
+  // Only deliver remote relay messages to the primary (main) session.
+  // Workers use local message routing (type: 'local') for inter-session comms.
+  const primary = sessions.get(PRIMARY_SESSION);
+  if (primary && primary.readyState === WebSocket.OPEN) {
     try {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(data);
-      }
-    } catch {
-      // ignore
-    }
-  }
-  for (const client of unnamedClients) {
-    try {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(data);
-      }
+      primary.send(data);
     } catch {
       // ignore
     }
