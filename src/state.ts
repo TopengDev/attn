@@ -1,4 +1,5 @@
 import type { PrivateKeyAccount } from 'viem/accounts';
+import WebSocket from 'ws';
 
 export type PresenceState = 'online' | 'away';
 
